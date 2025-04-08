@@ -8,6 +8,7 @@ This GitHub Action analyzes Solidity smart contract changes between commits to i
 - Detects specific contracts and methods that have been modified
 - Supports custom ignore patterns via `.scopeignore` file
 - Outputs a structured JSON file with changed declarations
+- Integration with Savant.chat AI audit service
 
 ## Usage
 
@@ -28,6 +29,11 @@ on:
         description: 'Head commit SHA for comparison'
         required: true
         default: 'HEAD'
+      send_to_audit:
+        description: 'Create a new audit in Savant.Chat'
+        required: false
+        default: 'true'
+        type: boolean
 
 jobs:
   analyze:
@@ -38,14 +44,16 @@ jobs:
         with:
           fetch-depth: 0
           
-      - name: Analyze Solidity Changes
+      - name: Analyze Solidity Changes & Send to Savant.Chat
         uses: auditdbio/smart-contract-change-analyzer@v1
         with:
-          # For manual trigger, use the provided inputs
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
           github_token: ${{ secrets.GITHUB_TOKEN }}
           scopeignore_path: '.scopeignore'  # Optional, defaults to '.scopeignore'
+          api_token: ${{ secrets.SAVANT_API_TOKEN }}  # API token for the audit service
+          api_url: 'https://savant.chat/api/v1/requests/create'
+          send_to_audit: ${{ github.event.inputs.send_to_audit || 'true' }}
           
       - name: Upload Analysis Results
         uses: actions/upload-artifact@v4
@@ -63,7 +71,18 @@ To run the analysis manually:
 3. Select the "Smart Contract Change Analyzer" workflow from the left sidebar
 4. Click the "Run workflow" button
 5. Enter the base commit SHA and head commit SHA
-6. Click "Run workflow"
+6. Optionally, enable "Create a new audit in Savant.Chat"
+7. Click "Run workflow"
+
+## AI Audit Service Integration
+
+1. Go to [Savant.chat](https://savant.chat) and create an account
+2. Navigate to Dashboard → Settings → API Keys
+3. Create a new API key
+4. Add the API key as a secret in your GitHub repository:
+   - Go to repository Settings → Secrets and variables → Actions
+   - Create a new secret named `SAVANT_API_TOKEN` with your API key
+5. Enable the `send_to_audit` option when running the workflow
 
 ## Inputs
 
@@ -73,8 +92,15 @@ To run the analysis manually:
 | `head_commit` | Head commit SHA for comparison | Yes | - |
 | `github_token` | GitHub token for repository access | No | `${{ github.token }}` |
 | `scopeignore_path` | Path to `.scopeignore` file | No | `.scopeignore` |
+| `api_token` | API token for the audit service | No* | - |
+| `api_url` | URL for the audit service API | No | `https://savant.chat/api/v1/requests/create` |
+| `send_to_audit` | Whether to send changes to the audit service | No | `true` |
+
+\* Required if `send_to_audit` is set to `true`
 
 ## Outputs
+
+### Analysis Results
 
 A JSON file (`changed_declarations.json`) containing the analysis results with the following structure:
 
