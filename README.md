@@ -7,8 +7,7 @@ This GitHub Action analyzes Solidity smart contract changes between commits to i
 - Identifies changed Solidity files between two commits
 - Detects specific contracts and methods that have been modified
 - Supports custom ignore patterns via `.scopeignore` file
-- Outputs a structured JSON file with changed declarations
-- Integration with Savant.chat AI audit service
+- Integration with Savant.chat audit service to submit changes for professional review
 
 ## Usage
 
@@ -29,11 +28,23 @@ on:
         description: 'Head commit SHA for comparison'
         required: true
         default: 'HEAD'
-      send_to_audit:
-        description: 'Create a new audit in Savant.Chat'
+      dry_run:
+        description: 'Dry Run (only return estimates without creating request)'
         required: false
-        default: 'true'
+        default: 'false'
         type: boolean
+      tier:
+        description: 'Audit tier'
+        required: false
+        default: 'advanced'
+        type: choice
+        options:
+          - advanced
+          - lite
+      project_id:
+        description: 'Documentation project ID'
+        required: false
+        default: ''
 
 jobs:
   analyze:
@@ -43,23 +54,24 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 0
-          
+      
       - name: Analyze Solidity Changes & Send to Savant.Chat
-        uses: auditdbio/smart-contract-change-analyzer@v1
+        uses: auditdbio/smart-contract-change-analyzer@v1.1
         with:
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           scopeignore_path: '.scopeignore'  # Optional, defaults to '.scopeignore'
           api_token: ${{ secrets.SAVANT_API_TOKEN }}  # API token for the audit service
-          api_url: 'https://savant.chat/api/v1/requests/create'
-          send_to_audit: ${{ github.event.inputs.send_to_audit || 'true' }}
-          
-      - name: Upload Analysis Results
+          api_url: 'https://savant.chat/api/v1'
+          dry_run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+          tier: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tier || 'advanced' }}
+          project_id: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.project_id || '' }}
+
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: changed-declarations
-          path: changed_declarations.json
+          name: workflow-results
+          path: workflow_results.json 
 ```
 
 ## How to Trigger Manually
@@ -71,10 +83,12 @@ To run the analysis manually:
 3. Select the "Smart Contract Change Analyzer" workflow from the left sidebar
 4. Click the "Run workflow" button
 5. Enter the base commit SHA and head commit SHA
-6. Optionally, enable "Create a new audit in Savant.Chat"
-7. Click "Run workflow"
+6. Optionally, enable "Dry Run"
+7. Select audit tier.
+8. Optionally, add documentation project ID.
+9. Click "Run workflow"
 
-## AI Audit Service Integration
+## Savant.Chat AI Audit Service Integration
 
 1. Go to [Savant.chat](https://savant.chat) and create an account
 2. Navigate to Dashboard → Settings → API Keys
@@ -82,7 +96,7 @@ To run the analysis manually:
 4. Add the API key as a secret in your GitHub repository:
    - Go to repository Settings → Secrets and variables → Actions
    - Create a new secret named `SAVANT_API_TOKEN` with your API key
-5. Enable the `send_to_audit` option when running the workflow
+5. Optionally, add documentation project ID from CI/CD.
 
 ## Inputs
 
@@ -90,35 +104,12 @@ To run the analysis manually:
 |-------|-------------|----------|---------|
 | `base_commit` | Base commit SHA for comparison | Yes | - |
 | `head_commit` | Head commit SHA for comparison | Yes | - |
-| `github_token` | GitHub token for repository access | No | `${{ github.token }}` |
 | `scopeignore_path` | Path to `.scopeignore` file | No | `.scopeignore` |
-| `api_token` | API token for the audit service | No* | - |
-| `api_url` | URL for the audit service API | No | `https://savant.chat/api/v1/requests/create` |
-| `send_to_audit` | Whether to send changes to the audit service | No | `true` |
-
-\* Required if `send_to_audit` is set to `true`
-
-## Outputs
-
-### Analysis Results
-
-A JSON file (`changed_declarations.json`) containing the analysis results with the following structure:
-
-```json
-[
-  {
-    "file": "contracts/Token.sol",
-    "status": "M",
-    "contracts": [
-      {
-        "name": "Token",
-        "type": "contract",
-        "methods": ["transfer", "approve"]
-      }
-    ]
-  }
-]
-```
+| `api_token` | API token for the audit service | No | - |
+| `api_url` | URL for the audit service API | No | `https://savant.chat/api/v1` |
+| `dry_run` | Return estimates without creating request | No | `false` |
+| `tier` | Tier | No | `advanced` |
+| `project_id` | Documentation project ID | No | - |
 
 ## Customizing Ignored Files
 

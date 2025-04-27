@@ -10,11 +10,23 @@ on:
         description: 'Head commit SHA for comparison'
         required: true
         default: 'HEAD'
-      send_to_audit:
-        description: 'Create a new audit in Savant.Chat'
+      dry_run:
+        description: 'Dry Run (only return estimates without creating request)'
         required: false
-        default: 'true'
+        default: 'false'
         type: boolean
+      tier:
+        description: 'Audit tier'
+        required: false
+        default: 'advanced'
+        type: choice
+        options:
+          - advanced
+          - lite
+      project_id:
+        description: 'Documentation project ID'
+        required: false
+        default: ''
 
   # Automatically trigger on pull requests
   # pull_request:
@@ -38,19 +50,19 @@ jobs:
           fetch-depth: 0
       
       - name: Analyze Solidity Changes & Send to Savant.Chat
-        uses: auditdbio/smart-contract-change-analyzer@v1
+        uses: auditdbio/smart-contract-change-analyzer@v1.1
         with:
-          # For manual trigger, use the provided inputs
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
-          github_token: ${{ secrets.GITHUB_TOKEN }}
           scopeignore_path: '.scopeignore'  # Optional, defaults to '.scopeignore'
           api_token: ${{ secrets.SAVANT_API_TOKEN }}  # API token for the audit service
-          api_url: 'https://savant.chat/api/v1/requests/create'
-          send_to_audit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.send_to_audit || 'true' }}
-      
-      - name: Upload Analysis Results
+          api_url: 'https://savant.chat/api/v1'
+          dry_run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
+          tier: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tier || 'advanced' }}
+          project_id: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.project_id || '' }}
+
+      - name: Upload Results
         uses: actions/upload-artifact@v4
         with:
-          name: changed-declarations
-          path: changed_declarations.json 
+          name: workflow-results
+          path: workflow_results.json 
