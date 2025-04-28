@@ -1,4 +1,4 @@
-name: Smart Contract Change Analyzer
+name: Savant Smart Contract Analyzer
 on:
   # Manual trigger with inputs
   workflow_dispatch:

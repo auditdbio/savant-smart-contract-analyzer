@@ -13,10 +13,10 @@ This workflow helps you spot and audit Solidity changes by comparing two commit 
 
 ### 1. Add the Workflow file
 
-Create (or update) `.github/workflows/smart-contract-change-analyzer.yml`
+Create (or update) `.github/workflows/savant-smart-contract-analyzer.yml`
 
 ```yaml
-name: Smart Contract Change Analyzer
+name: Savant Smart Contract Analyzer
 on:
   workflow_dispatch:
     inputs:
@@ -85,7 +85,7 @@ jobs:
 ### 3. Configure Triggers
 
 - **Manual Run**  
-  Use the _Actions_ tab → select **Smart Contract Change Analyzer** → **Run workflow**, then fill in:
+  Use the _Actions_ tab → select **Savant Smart Contract Analyzer** → **Run workflow**, then fill in:
   - **base_commit**: SHA to compare from
   - **head_commit**: SHA to compare to (defaults to `HEAD`)
   - **dry_run**: `true`/`false` (skips request creation if true)
