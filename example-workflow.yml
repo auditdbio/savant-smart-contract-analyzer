@@ -11,7 +11,7 @@ on:
         required: true
         default: 'HEAD'
       dry_run:
-        description: 'Dry Run (only return estimates without creating request)'
+        description: 'Whether to perform a dry run (do not create real audit)'
         required: false
         default: 'false'
         type: boolean
@@ -21,12 +21,9 @@ on:
         default: 'advanced'
         type: choice
         options:
+          - pro
           - advanced
           - lite
-      project_id:
-        description: 'Documentation project ID'
-        required: false
-        default: ''
 
   # Automatically trigger on pull requests
   # pull_request:
@@ -49,20 +46,11 @@ jobs:
         with:
           fetch-depth: 0
       
-      - name: Analyze Solidity Changes & Send to Savant.Chat
-        uses: auditdbio/savant-smart-contract-analyzer@v1.1
+      - name: Create Savant.Chat audit request
+        uses: auditdbio/savant-smart-contract-analyzer@v1.2
         with:
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
-          scopeignore_path: '.scopeignore'  # Optional, defaults to '.scopeignore'
           api_token: ${{ secrets.SAVANT_API_TOKEN }}
-          api_url: 'https://savant.chat/api/v1'
           dry_run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
           tier: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tier || 'advanced' }}
-          project_id: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.project_id || '' }}
-
-      - name: Upload Results
-        uses: actions/upload-artifact@v4
-        with:
-          name: workflow-results
-          path: workflow_results.json 

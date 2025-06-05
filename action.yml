@@ -1,5 +1,5 @@
-name: 'Smart Contract Change Analyzer'
-description: 'Analyzes changes in Solidity contracts between commits'
+name: 'Savant Smart Contract Analyzer'
+description: 'Analyzes changes in Solidity contracts between commits and creates an audit request in Savant.Chat'
 branding:
   icon: 'search'
   color: 'blue'
@@ -14,17 +14,13 @@ inputs:
     description: 'GitHub token for repository access'
     required: false
     default: ${{ github.token }}
-  scopeignore_path:
-    description: 'Path to .scopeignore file in repository (relative to repo root)'
-    required: false
-    default: '.scopeignore'
   api_token:
     description: 'API token for the audit service. Get it from https://savant.chat (Profile -> Settings -> API Keys)'
-    required: false
+    required: true
   api_url:
     description: 'URL for the audit service API endpoint'
     required: false
-    default: 'https://savant.chat/api/v1'
+    default: 'https://savant.chat/api/v1/ci-cd/requests'
   dry_run:
     description: 'Whether to perform a dry run (do not create real audit)'
     required: false
@@ -33,25 +29,44 @@ inputs:
     description: 'Tier'
     required: false
     default: 'advanced'
-  project_id:
-    description: 'Documentation project ID'
-    required: false
-outputs:
-  changes_file:
-    description: 'Path to the JSON file with analyzed changes'
-    value: 'changed_declarations.json'
-  audit_response:
-    description: 'Response from the audit service (if enabled)'
-    value: ${{ steps.analyze.outputs.audit_response }}
+
 runs:
-  using: 'docker'
-  image: 'Dockerfile'
-  args:
-    - ${{ inputs.base_commit }}
-    - ${{ inputs.head_commit }}
-    - ${{ inputs.scopeignore_path }}
-    - ${{ inputs.api_token }}
-    - ${{ inputs.api_url }}
-    - ${{ inputs.dry_run }}
-    - ${{ inputs.tier }}
-    - ${{ inputs.project_id }} 
+  using: 'composite'
+  steps:
+    - name: Send request to Savant.Chat
+      shell: bash
+      run: |
+        echo "Sending request to Savant.Chat at ${{ inputs.api_url }}"
+        echo "Inputs:"
+        echo "  repo: ${{ github.repository }}"
+        echo "  base_commit: ${{ inputs.base_commit }}"
+        echo "  head_commit: ${{ inputs.head_commit }}"
+        echo "  dry_run: ${{ inputs.dry_run }}"
+        echo "  tier: ${{ inputs.tier }}"
+        PAYLOAD="{\"repo\":\"${{ github.repository }}\",\"base_commit\":\"${{ inputs.base_commit }}\",\"head_commit\":\"${{ inputs.head_commit }}\",\"github_token\":\"${{ inputs.github_token }}\",\"api_token\":\"${{ inputs.api_token }}\",\"dry_run\":${{ inputs.dry_run }},\"tier\":\"${{ inputs.tier }}\"}"
+        echo "Request payload: $PAYLOAD"
+        RESPONSE=$(curl -sS -X POST "${{ inputs.api_url }}" \
+          -H "Authorization: Bearer ${{ inputs.api_token }}" \
+          -H "Content-Type: application/json" \
+          -d "$PAYLOAD") || true
+        echo "Response body:"
+        echo "$RESPONSE" | jq '(.requestLink, .requestId) |= "***"'
+        # Try parsing JSON response
+        if echo "$RESPONSE" | jq . >/dev/null 2>&1; then
+          AUDIT_URL=$(echo "$RESPONSE" | jq -r .requestLink)
+        else
+          echo "Non-JSON response (likely HTML). See above."
+          exit 1
+        fi
+        # Ensure requestLink is present
+        if [ -z "$AUDIT_URL" ] || [ "$AUDIT_URL" = "null" ]; then
+          echo "Error: requestLink not found in JSON response"
+          exit 1
+        fi
+        # Generate redirect HTML
+        echo "<html><head><meta http-equiv=\"refresh\" content=\"0; URL=$AUDIT_URL\" /></head></html>" > audit.html
+    - name: Upload audit redirect HTML
+      uses: actions/upload-artifact@v4
+      with:
+        name: audit-redirect
+        path: audit.html
