@@ -27,7 +27,7 @@ on:
       notification_contacts:
         description: 'Notification contacts (comma-separated emails and Telegram usernames)'
         required: false
-        default: ''
+        default: ''  # For example, 'devops@company.com, @telegram_devops'
 
   # Automatically trigger on pull requests
   # pull_request:
@@ -51,11 +51,11 @@ jobs:
           fetch-depth: 0
       
       - name: Create Savant.Chat audit request
-        uses: auditdbio/savant-smart-contract-analyzer@v1.2
+        uses: auditdbio/savant-smart-contract-analyzer@v1.3
         with:
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
           api_token: ${{ secrets.SAVANT_API_TOKEN }}
           dry_run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
           tier: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tier || 'advanced' }}
-          notification_contacts: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.notification_contacts || 'devops@company.com, @telegram_devops' }}
+          notification_contacts: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.notification_contacts || '' }} # # For example, 'devops@company.com, @telegram_devops'
