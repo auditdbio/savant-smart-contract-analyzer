@@ -24,6 +24,10 @@ on:
           - pro
           - advanced
           - lite
+      notification_contacts:
+        description: 'Notification contacts (comma-separated emails and Telegram usernames)'
+        required: false
+        default: ''
 
   # Automatically trigger on pull requests
   # pull_request:
@@ -54,3 +58,4 @@ jobs:
           api_token: ${{ secrets.SAVANT_API_TOKEN }}
           dry_run: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.dry_run || 'false' }}
           tier: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.tier || 'advanced' }}
+          notification_contacts: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.notification_contacts || 'devops@company.com, @telegram_devops' }}

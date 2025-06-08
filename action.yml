@@ -29,6 +29,10 @@ inputs:
     description: 'Tier'
     required: false
     default: 'advanced'
+  notification_contacts:
+    description: 'Comma-separated list of notification contacts (emails and Telegram usernames)'
+    required: false
+    default: ''
 
 runs:
   using: 'composite'
@@ -43,7 +47,17 @@ runs:
         echo "  head_commit: ${{ inputs.head_commit }}"
         echo "  dry_run: ${{ inputs.dry_run }}"
         echo "  tier: ${{ inputs.tier }}"
-        PAYLOAD="{\"repo\":\"${{ github.repository }}\",\"base_commit\":\"${{ inputs.base_commit }}\",\"head_commit\":\"${{ inputs.head_commit }}\",\"github_token\":\"${{ inputs.github_token }}\",\"api_token\":\"${{ inputs.api_token }}\",\"dry_run\":${{ inputs.dry_run }},\"tier\":\"${{ inputs.tier }}\"}"
+        echo "  notification_contacts: ${{ inputs.notification_contacts }}"
+        
+        # Convert comma-separated notification_contacts to JSON array
+        if [ -n "${{ inputs.notification_contacts }}" ]; then
+          NOTIFICATION_CONTACTS_JSON=$(echo "${{ inputs.notification_contacts }}" | sed 's/[[:space:]]*,[[:space:]]*/","/g' | sed 's/^/"/' | sed 's/$/"/' | sed 's/^/[/' | sed 's/$/]/')
+        else
+          NOTIFICATION_CONTACTS_JSON="[]"
+        fi
+        echo "  notification_contacts_json: $NOTIFICATION_CONTACTS_JSON"
+        
+        PAYLOAD="{\"repo\":\"${{ github.repository }}\",\"base_commit\":\"${{ inputs.base_commit }}\",\"head_commit\":\"${{ inputs.head_commit }}\",\"github_token\":\"${{ inputs.github_token }}\",\"api_token\":\"${{ inputs.api_token }}\",\"dry_run\":${{ inputs.dry_run }},\"tier\":\"${{ inputs.tier }}\",\"notification_contacts\":$NOTIFICATION_CONTACTS_JSON}"
         echo "Request payload: $PAYLOAD"
         RESPONSE=$(curl -sS -X POST "${{ inputs.api_url }}" \
           -H "Authorization: Bearer ${{ inputs.api_token }}" \
