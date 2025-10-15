@@ -67,6 +67,16 @@ runs:
         echo "$RESPONSE" | jq '(.requestLink, .requestId) |= "***"'
         # Try parsing JSON response
         if echo "$RESPONSE" | jq . >/dev/null 2>&1; then
+          # Check if response contains an error
+          ERROR_MSG=$(echo "$RESPONSE" | jq -r '.error // empty')
+          if [ -n "$ERROR_MSG" ]; then
+            echo "Error from API: $ERROR_MSG"
+            ERROR_DETAILS=$(echo "$RESPONSE" | jq -r '.details // empty')
+            if [ -n "$ERROR_DETAILS" ]; then
+              echo "Details: $ERROR_DETAILS"
+            fi
+            exit 1
+          fi
           AUDIT_URL=$(echo "$RESPONSE" | jq -r .requestLink)
         else
           echo "Non-JSON response (likely HTML). See above."
