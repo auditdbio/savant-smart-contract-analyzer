@@ -13,6 +13,21 @@ This GitHub composite Action sends two commit SHAs to Savant.Chat for full diff 
    - Go to repository Settings → Secrets and variables → Actions
    - Add a new secret named `SAVANT_API_TOKEN` containing your Savant API key.
 
+#### Optional: Set Up Default Notification Contacts
+
+To receive notifications when audits complete, you can configure default notification contacts:
+
+1. In your GitHub repository, go to Settings → Secrets and variables → Actions
+2. Add a new secret named `SAVANT_NOTIFICATION_CONTACTS`
+3. Set the value to a comma-separated list of:
+   - Email addresses (e.g., `devops@company.com`)
+   - Telegram usernames with @ prefix (e.g., `@telegram_devops`)
+   - Telegram chat IDs (e.g., `123456789`)
+
+Example: `devops@company.com, @team_lead, 987654321`
+
+These contacts will receive notifications for all workflow runs (manual triggers, pull requests, and pushes). You can also specify additional contacts per run using the `notification_contacts` input when manually triggering the workflow.
+
 ### 2. Manual Trigger (GitHub UI)
 
 1. Create (or update) .github/workflows/savant-smart-contract-analyzer.yml following the example-workflow.yml
@@ -142,7 +157,8 @@ https://example.com/docs/overview.html
 | `api_token` | API token for the audit service | Yes | - |
 | `api_url` | URL for the audit service API | No | `https://savant.chat/api/v1/ci-cd/requests` |
 | `dry_run` | Return estimates without creating request | No | `false` |
-| `tier` | Tier | No | `advanced` |
+| `tier` | Audit tier (lite, advanced, or pro) | No | `advanced` |
+| `notification_contacts` | Comma-separated list of notification contacts (emails, Telegram usernames/IDs). Combined with `SAVANT_NOTIFICATION_CONTACTS` secret if set. | No | `''` |
 
 ## License
 

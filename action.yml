@@ -49,6 +49,21 @@ runs:
         echo "  tier: ${{ inputs.tier }}"
         echo "  notification_contacts: ${{ inputs.notification_contacts }}"
         
+        # Resolve commit references to absolute SHAs
+        # This ensures that relative references like HEAD or HEAD~3 are resolved
+        # in the context of the current branch before sending to the API
+        BASE_COMMIT_SHA=$(git rev-parse "${{ inputs.base_commit }}")
+        HEAD_COMMIT_SHA=$(git rev-parse "${{ inputs.head_commit }}")
+        
+        if [ -z "$BASE_COMMIT_SHA" ] || [ -z "$HEAD_COMMIT_SHA" ]; then
+          echo "Error: Failed to resolve commit references"
+          exit 1
+        fi
+        
+        echo "Resolved commits:"
+        echo "  base_commit_sha: $BASE_COMMIT_SHA"
+        echo "  head_commit_sha: $HEAD_COMMIT_SHA"
+        
         # Convert comma-separated notification_contacts to JSON array
         if [ -n "${{ inputs.notification_contacts }}" ]; then
           NOTIFICATION_CONTACTS_JSON=$(echo "${{ inputs.notification_contacts }}" | sed 's/[[:space:]]*,[[:space:]]*/","/g' | sed 's/^/"/' | sed 's/$/"/' | sed 's/^/[/' | sed 's/$/]/')
@@ -57,7 +72,7 @@ runs:
         fi
         echo "  notification_contacts_json: $NOTIFICATION_CONTACTS_JSON"
         
-        PAYLOAD="{\"repo\":\"${{ github.repository }}\",\"base_commit\":\"${{ inputs.base_commit }}\",\"head_commit\":\"${{ inputs.head_commit }}\",\"github_token\":\"${{ inputs.github_token }}\",\"api_token\":\"${{ inputs.api_token }}\",\"dry_run\":${{ inputs.dry_run }},\"tier\":\"${{ inputs.tier }}\",\"notification_contacts\":$NOTIFICATION_CONTACTS_JSON}"
+        PAYLOAD="{\"repo\":\"${{ github.repository }}\",\"base_commit\":\"$BASE_COMMIT_SHA\",\"head_commit\":\"$HEAD_COMMIT_SHA\",\"github_token\":\"${{ inputs.github_token }}\",\"api_token\":\"${{ inputs.api_token }}\",\"dry_run\":${{ inputs.dry_run }},\"tier\":\"${{ inputs.tier }}\",\"notification_contacts\":$NOTIFICATION_CONTACTS_JSON}"
         echo "Request payload: $PAYLOAD"
         RESPONSE=$(curl -sS -X POST "${{ inputs.api_url }}" \
           -H "Authorization: Bearer ${{ inputs.api_token }}" \
