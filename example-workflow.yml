@@ -81,7 +81,7 @@ jobs:
           echo "Combined notification contacts: $COMBINED_CONTACTS"
       
       - name: Create Savant.Chat audit request
-        uses: auditdbio/savant-smart-contract-analyzer@v1.3
+        uses: auditdbio/savant-smart-contract-analyzer@v1.5
         with:
           base_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.base_commit || github.event_name == 'push' && github.event.before || github.event.pull_request.base.sha }}
           head_commit: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.head_commit || github.event_name == 'push' && github.sha || github.event.pull_request.head.sha }}
